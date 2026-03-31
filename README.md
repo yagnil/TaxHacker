@@ -134,7 +134,7 @@ Example custom configuration:
 ```yaml
 services:
   app:
-    image: ghcr.io/vas3k/taxhacker:latest
+    image: ${TAXHACKER_IMAGE:-ghcr.io/yagnil/taxhacker:latest}
     ports:
       - "7331:7331"
     environment:

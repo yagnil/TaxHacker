@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/vas3k/taxhacker:latest
+    image: ${TAXHACKER_IMAGE:-ghcr.io/yagnil/taxhacker:latest}
     container_name: taxhacker_app
     networks:
       - taxhacker_network
