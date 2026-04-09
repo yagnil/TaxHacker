@@ -84,6 +84,19 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.PI_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Sync deploy files to Raspberry Pi
+        shell: bash
+        env:
+          PI_HOST: ${{ secrets.PI_HOST }}
+          PI_USER: ${{ secrets.PI_USER }}
+        run: |
+          set -euo pipefail
+
+          ssh "${PI_USER}@${PI_HOST}" "mkdir -p '${PI_DEPLOY_DIR}/scripts'"
+          scp docker-compose.production.yml "${PI_USER}@${PI_HOST}:${PI_DEPLOY_DIR}/docker-compose.production.yml"
+          scp scripts/deploy-with-rollback.sh "${PI_USER}@${PI_HOST}:${PI_DEPLOY_DIR}/scripts/deploy-with-rollback.sh"
+          ssh "${PI_USER}@${PI_HOST}" "chmod +x '${PI_DEPLOY_DIR}/scripts/deploy-with-rollback.sh'"
+
       - name: Deploy on Raspberry Pi
         shell: bash
         env:
