@@ -83,7 +83,11 @@ export async function deleteTransactionAction(
 
     await deleteTransaction(transaction.id, user.id)
 
+    const storageUsed = await getDirectorySize(getUserUploadsDirectory(user))
+    await updateUser(user.id, { storageUsed })
+
     revalidatePath("/transactions")
+    revalidatePath(`/transactions/${transactionId}`)
 
     return { success: true, data: transaction }
   } catch (error) {
@@ -206,6 +210,10 @@ export async function bulkDeleteTransactionsAction(transactionIds: string[]) {
   try {
     const user = await getCurrentUser()
     await bulkDeleteTransactions(transactionIds, user.id)
+
+    const storageUsed = await getDirectorySize(getUserUploadsDirectory(user))
+    await updateUser(user.id, { storageUsed })
+
     revalidatePath("/transactions")
     return { success: true }
   } catch (error) {

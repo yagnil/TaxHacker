@@ -184,9 +184,16 @@ export const deleteTransaction = async (id: string, userId: string): Promise<Tra
 }
 
 export const bulkDeleteTransactions = async (ids: string[], userId: string) => {
-  return await prisma.transaction.deleteMany({
-    where: { id: { in: ids }, userId },
-  })
+  const deletedTransactions: Transaction[] = []
+
+  for (const id of ids) {
+    const deletedTransaction = await deleteTransaction(id, userId)
+    if (deletedTransaction) {
+      deletedTransactions.push(deletedTransaction)
+    }
+  }
+
+  return deletedTransactions
 }
 
 const splitTransactionDataExtraFields = async (

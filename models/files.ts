@@ -1,10 +1,12 @@
 "use server"
 
+import { getUserUploadsDirectory } from "@/lib/files"
 import { prisma } from "@/lib/db"
 import { unlink } from "fs/promises"
 import path from "path"
 import { cache } from "react"
 import { getTransactionById } from "./transactions"
+import { getUserById } from "./users"
 
 export const getUnsortedFiles = cache(async (userId: string) => {
   return await prisma.file.findMany({
@@ -73,8 +75,13 @@ export const deleteFile = async (id: string, userId: string) => {
     return
   }
 
+  const user = await getUserById(userId)
+
   try {
-    await unlink(path.resolve(path.normalize(file.path)))
+    if (user) {
+      const fullPath = path.resolve(getUserUploadsDirectory(user), path.normalize(file.path))
+      await unlink(fullPath)
+    }
   } catch (error) {
     console.error("Error deleting file:", error)
   }

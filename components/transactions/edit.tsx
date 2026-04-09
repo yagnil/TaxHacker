@@ -72,9 +72,8 @@ export default function TransactionEditForm({
 
   const handleDelete = async () => {
     if (confirm("Are you sure? This will delete the transaction with all the files permanently")) {
-      startTransition(async () => {
-        await deleteAction(transaction.id)
-        router.back()
+      startTransition(() => {
+        deleteAction(transaction.id)
       })
     }
   }
@@ -84,6 +83,12 @@ export default function TransactionEditForm({
       router.back()
     }
   }, [saveState, router])
+
+  useEffect(() => {
+    if (deleteState?.success) {
+      router.push("/transactions")
+    }
+  }, [deleteState, router])
 
   return (
     <form action={saveAction} className="space-y-4">

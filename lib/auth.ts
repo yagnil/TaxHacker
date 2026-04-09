@@ -27,11 +27,13 @@ export const auth = betterAuth({
   appName: config.app.title,
   baseURL: config.app.baseURL,
   secret: config.auth.secret,
-  email: {
-    provider: "resend",
-    from: config.email.from,
-    resend,
-  },
+  email: resend
+    ? {
+        provider: "resend",
+        from: config.email.from,
+        resend,
+      }
+    : undefined,
   session: {
     strategy: "jwt",
     expiresIn: 180 * 24 * 60 * 60, // 365 days
