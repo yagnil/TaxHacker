@@ -139,3 +139,36 @@ jobs:
           ENV_FILE="${PI_ENV_FILE}" \
           ./scripts/deploy-with-rollback.sh "${DEPLOY_IMAGE}"
           EOF
+
+      - name: Collect Raspberry Pi diagnostics on failure
+        if: failure()
+        shell: bash
+        env:
+          PI_HOST: ${{ secrets.PI_HOST }}
+          PI_USER: ${{ secrets.PI_USER }}
+        run: |
+          set -euo pipefail
+
+          ssh "${PI_USER}@${PI_HOST}" \
+            PI_DEPLOY_DIR="${PI_DEPLOY_DIR}" \
+            PI_COMPOSE_FILE="${PI_COMPOSE_FILE}" \
+            PI_ENV_FILE="${PI_ENV_FILE}" \
+            'sh -se' <<'EOF'
+          set -euo pipefail
+
+          cd "${PI_DEPLOY_DIR}"
+
+          echo "== docker compose ps =="
+          docker compose --env-file "${PI_ENV_FILE}" -f "${PI_COMPOSE_FILE}" ps || true
+
+          echo "== app logs =="
+          docker compose --env-file "${PI_ENV_FILE}" -f "${PI_COMPOSE_FILE}" logs --tail=200 app || true
+
+          container_id=$(docker compose --env-file "${PI_ENV_FILE}" -f "${PI_COMPOSE_FILE}" ps -q app)
+          if [ -n "${container_id}" ]; then
+            echo "== container health =="
+            docker inspect --format '{{json .State.Health}}' "${container_id}" || true
+            echo "== container state =="
+            docker inspect --format '{{json .State}}' "${container_id}" || true
+          fi
+          EOF
