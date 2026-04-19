@@ -10,6 +10,12 @@ const envSchema = z.object({
   GOOGLE_MODEL_NAME: z.string().default("gemini-2.5-flash"),
   MISTRAL_API_KEY: z.string().optional(),
   MISTRAL_MODEL_NAME: z.string().default("mistral-medium-latest"),
+  LOCAL_LLM_BACKEND: z.enum(["ollama", "lmstudio"]).optional(),
+  LOCAL_LLM_API_KEY: z.string().optional(),
+  LOCAL_LLM_BASE_URL: z.string().url().optional(),
+  LOCAL_LLM_MODEL_NAME: z.string().optional(),
+  OLLAMA_BASE_URL: z.string().url().default("http://127.0.0.1:11434"),
+  OLLAMA_MODEL_NAME: z.string().default("gemma3:4b"),
   BETTER_AUTH_SECRET: z
     .string()
     .min(16, "Auth secret must be at least 16 characters")
@@ -59,6 +65,12 @@ const config = {
     googleModelName: env.GOOGLE_MODEL_NAME,
     mistralApiKey: env.MISTRAL_API_KEY,
     mistralModelName: env.MISTRAL_MODEL_NAME,
+    localLlmBackend: env.LOCAL_LLM_BACKEND || "ollama",
+    localLlmApiKey: env.LOCAL_LLM_API_KEY || "",
+    localLlmBaseUrl: env.LOCAL_LLM_BASE_URL || env.OLLAMA_BASE_URL,
+    localLlmModelName: env.LOCAL_LLM_MODEL_NAME || env.OLLAMA_MODEL_NAME,
+    ollamaBaseUrl: env.OLLAMA_BASE_URL,
+    ollamaModelName: env.OLLAMA_MODEL_NAME,
   },
   auth: {
     secret: env.BETTER_AUTH_SECRET,

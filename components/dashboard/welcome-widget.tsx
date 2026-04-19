@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardTitle } from "@/components/ui/card"
 import { ColoredText } from "@/components/ui/colored-text"
 import { getCurrentUser } from "@/lib/auth"
-import { getSettings, updateSettings } from "@/models/settings"
+import { getSettings, hasConfiguredLLMProvider, updateSettings } from "@/models/settings"
 import { Banknote, ChartBarStacked, FolderOpenDot, Key, TextCursorInput, X } from "lucide-react"
 import { revalidatePath } from "next/cache"
 import Image from "next/image"
@@ -11,6 +11,7 @@ import Link from "next/link"
 export async function WelcomeWidget() {
   const user = await getCurrentUser()
   const settings = await getSettings(user.id)
+  const hasConfiguredProvider = hasConfiguredLLMProvider(settings)
 
   return (
     <Card className="flex flex-col lg:flex-row items-start gap-10 p-10 w-full">
@@ -93,11 +94,11 @@ export async function WelcomeWidget() {
           </Link>
         </div>
         <div className="flex flex-wrap gap-2 mt-8">
-          {settings.openai_api_key === "" && (
+          {!hasConfiguredProvider && (
             <Link href="/settings/llm">
               <Button>
                 <Key className="h-4 w-4" />
-                Please give your ChatGPT key here
+                Configure an LLM provider
               </Button>
             </Link>
           )}

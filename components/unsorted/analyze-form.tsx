@@ -13,10 +13,84 @@ import { FormSelectType } from "@/components/forms/select-type"
 import { FormInput, FormTextarea } from "@/components/forms/simple"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { formatBytes } from "@/lib/utils"
 import { Category, Currency, Field, File, Project } from "@/prisma/client"
 import { format } from "date-fns"
 import { ArrowDownToLine, Brain, Loader2, Trash2 } from "lucide-react"
-import { startTransition, useActionState, useMemo, useState } from "react"
+import { startTransition, useActionState, useEffect, useMemo, useState } from "react"
+
+const MAX_ANALYZE_ATTACHMENTS = 4
+
+function formatElapsed(durationMs: number) {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`
+}
+
+function getActiveProviderStats(settings: Record<string, string>) {
+  const providerOrder = (settings.llm_providers || "openai,google,mistral,local")
+    .split(",")
+    .map((provider) => provider.trim())
+    .filter(Boolean)
+
+  for (const provider of providerOrder) {
+    if (provider === "openai" && settings.openai_api_key && settings.openai_model_name) {
+      return {
+        providerLabel: "OpenAI",
+        model: settings.openai_model_name,
+        endpointLabel: "Cloud API",
+        reasoningLabel: "Managed by provider",
+      }
+    }
+
+    if (provider === "google" && settings.google_api_key && settings.google_model_name) {
+      return {
+        providerLabel: "Google",
+        model: settings.google_model_name,
+        endpointLabel: "Cloud API",
+        reasoningLabel: "Managed by provider",
+      }
+    }
+
+    if (provider === "mistral" && settings.mistral_api_key && settings.mistral_model_name) {
+      return {
+        providerLabel: "Mistral",
+        model: settings.mistral_model_name,
+        endpointLabel: "Cloud API",
+        reasoningLabel: "Managed by provider",
+      }
+    }
+
+    if (provider === "local" && settings.local_llm_base_url && settings.local_llm_model_name) {
+      const backend = settings.local_llm_backend || "ollama"
+      const backendLabel = backend === "lmstudio" ? "LM Studio" : "Ollama"
+      return {
+        providerLabel: `Local LLM (${backendLabel})`,
+        model: settings.local_llm_model_name,
+        endpointLabel: settings.local_llm_base_url,
+        reasoningLabel: backend === "lmstudio" ? "Disabled for this request" : "Model default",
+      }
+    }
+
+    if (provider === "ollama" && settings.ollama_base_url && settings.ollama_model_name) {
+      return {
+        providerLabel: "Ollama",
+        model: settings.ollama_model_name,
+        endpointLabel: settings.ollama_base_url,
+        reasoningLabel: "Model default",
+      }
+    }
+  }
+
+  return {
+    providerLabel: "Not configured",
+    model: "Unknown",
+    endpointLabel: "No active provider",
+    reasoningLabel: "Unknown",
+  }
+}
 
 export default function AnalyzeForm({
   file,
@@ -37,6 +111,13 @@ export default function AnalyzeForm({
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analyzeStep, setAnalyzeStep] = useState<string>("")
   const [analyzeError, setAnalyzeError] = useState<string>("")
+  const [analyzeStartedAt, setAnalyzeStartedAt] = useState<number | null>(null)
+  const [elapsedMs, setElapsedMs] = useState(0)
+  const [lastAnalysisStats, setLastAnalysisStats] = useState<{
+    durationMs: number
+    populatedFieldCount: number
+    status: "success" | "error"
+  } | null>(null)
   const [deleteState, deleteAction, isDeleting] = useActionState(deleteUnsortedFileAction, null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
@@ -83,7 +164,7 @@ export default function AnalyzeForm({
     const cachedResults = file.cachedParseResult
       ? Object.fromEntries(
           Object.entries(file.cachedParseResult as Record<string, string>).filter(
-            ([_, value]) => value !== null && value !== undefined && value !== ""
+            ([, value]) => value !== null && value !== undefined && value !== ""
           )
         )
       : {}
@@ -98,6 +179,36 @@ export default function AnalyzeForm({
   const exchangeRateDate = useMemo(() => {
     return formData.issuedAt ? new Date(formData.issuedAt) : new Date(file.createdAt)
   }, [file.createdAt, formData.issuedAt])
+  const activeProviderStats = useMemo(() => getActiveProviderStats(settings), [settings])
+  const fileSize = useMemo(() => {
+    return file.metadata && typeof file.metadata === "object" && "size" in file.metadata
+      ? Number(file.metadata.size)
+      : 0
+  }, [file.metadata])
+  const analysisScopeStats = useMemo(() => {
+    const visibleFieldCount = fields.filter((field) => field.isVisibleInAnalysis).length
+    const requiredFieldCount = fields.filter((field) => field.isRequired).length
+
+    return {
+      visibleFieldCount,
+      requiredFieldCount,
+      extraFieldCount: extraFields.length,
+      categoryCount: categories.length,
+      projectCount: projects.length,
+    }
+  }, [categories.length, extraFields.length, fields, projects.length])
+
+  useEffect(() => {
+    if (!isAnalyzing || !analyzeStartedAt) {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      setElapsedMs(Date.now() - analyzeStartedAt)
+    }, 1000)
+
+    return () => window.clearInterval(interval)
+  }, [analyzeStartedAt, isAnalyzing])
 
   async function saveAsTransaction(formData: FormData) {
     setSaveError("")
@@ -118,8 +229,12 @@ export default function AnalyzeForm({
   }
 
   const startAnalyze = async () => {
+    const startedAt = Date.now()
     setIsAnalyzing(true)
     setAnalyzeError("")
+    setAnalyzeStartedAt(startedAt)
+    setElapsedMs(0)
+    setLastAnalysisStats(null)
     try {
       setAnalyzeStep("Analyzing...")
       const results = await analyzeFileAction(file, settings, fields, categories, projects)
@@ -128,19 +243,36 @@ export default function AnalyzeForm({
 
       if (!results.success) {
         setAnalyzeError(results.error ? results.error : "Something went wrong...")
+        setLastAnalysisStats({
+          durationMs: Date.now() - startedAt,
+          populatedFieldCount: 0,
+          status: "error",
+        })
       } else {
         const nonEmptyFields = Object.fromEntries(
           Object.entries(results.data?.output || {}).filter(
-            ([_, value]) => value !== null && value !== undefined && value !== ""
+            ([, value]) => value !== null && value !== undefined && value !== ""
           )
         )
         setFormData({ ...formData, ...nonEmptyFields })
+        setLastAnalysisStats({
+          durationMs: Date.now() - startedAt,
+          populatedFieldCount: Object.keys(nonEmptyFields).length,
+          status: "success",
+        })
       }
     } catch (error) {
       console.error("Analysis failed:", error)
       setAnalyzeError(error instanceof Error ? error.message : "Analysis failed")
+      setLastAnalysisStats({
+        durationMs: Date.now() - startedAt,
+        populatedFieldCount: 0,
+        status: "error",
+      })
     } finally {
       setIsAnalyzing(false)
+      setAnalyzeStartedAt(null)
+      setElapsedMs(Date.now() - startedAt)
       setAnalyzeStep("")
     }
   }
@@ -165,6 +297,62 @@ export default function AnalyzeForm({
             </>
           )}
         </Button>
+      )}
+
+      {(isAnalyzing || lastAnalysisStats) && (
+        <div className="mb-6 rounded-xl border border-border/60 bg-muted/30 p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">Analysis stats</span>
+              <Badge variant="outline">{isAnalyzing ? "Running" : lastAnalysisStats?.status === "success" ? "Completed" : "Failed"}</Badge>
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {isAnalyzing ? `Elapsed ${formatElapsed(elapsedMs)}` : lastAnalysisStats ? `Last run ${formatElapsed(lastAnalysisStats.durationMs)}` : ""}
+            </span>
+          </div>
+
+          <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-lg bg-background/70 p-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Provider</div>
+              <div className="mt-1 font-medium">{activeProviderStats.providerLabel}</div>
+              <div className="mt-1 break-all text-xs text-muted-foreground">{activeProviderStats.endpointLabel}</div>
+            </div>
+
+            <div className="rounded-lg bg-background/70 p-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Model</div>
+              <div className="mt-1 break-all font-medium">{activeProviderStats.model}</div>
+              <div className="mt-1 text-xs text-muted-foreground">Reasoning: {activeProviderStats.reasoningLabel}</div>
+            </div>
+
+            <div className="rounded-lg bg-background/70 p-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">File</div>
+              <div className="mt-1 font-medium">{file.mimetype}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{formatBytes(fileSize)}</div>
+            </div>
+
+            <div className="rounded-lg bg-background/70 p-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Extraction scope</div>
+              <div className="mt-1 font-medium">{analysisScopeStats.visibleFieldCount} visible fields</div>
+              <div className="mt-1 text-xs text-muted-foreground">{analysisScopeStats.requiredFieldCount} required, {analysisScopeStats.extraFieldCount} custom</div>
+            </div>
+
+            <div className="rounded-lg bg-background/70 p-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Reference data</div>
+              <div className="mt-1 font-medium">{analysisScopeStats.categoryCount} categories</div>
+              <div className="mt-1 text-xs text-muted-foreground">{analysisScopeStats.projectCount} projects available</div>
+            </div>
+
+            <div className="rounded-lg bg-background/70 p-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Attachment budget</div>
+              <div className="mt-1 font-medium">Up to {MAX_ANALYZE_ATTACHMENTS} preview pages</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {lastAnalysisStats?.status === "success"
+                  ? `${lastAnalysisStats.populatedFieldCount} fields filled in the last run`
+                  : "Preview images are sent to the model"}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <div>{analyzeError && <FormError>{analyzeError}</FormError>}</div>
@@ -206,7 +394,9 @@ export default function AnalyzeForm({
             value={formData.total || ""}
             onChange={(e) => {
               const newValue = parseFloat(e.target.value || "0")
-              !isNaN(newValue) && setFormData((prev) => ({ ...prev, total: newValue }))
+              if (!isNaN(newValue)) {
+                setFormData((prev) => ({ ...prev, total: newValue }))
+              }
             }}
             className="w-32"
             required={fieldMap.total.isRequired}
