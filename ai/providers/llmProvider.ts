@@ -68,7 +68,7 @@ function extractResponseText(content: unknown): string {
 function summarizeRequest(req: LLMRequest) {
   return {
     promptLength: req.prompt.length,
-    schemaKeys: Object.keys(req.schema?.properties as Record<string, unknown> | undefined || {}).length,
+    schemaKeys: Object.keys((req.schema?.properties ?? {}) as Record<string, unknown>).length,
     attachmentCount: req.attachments?.length || 0,
     attachmentTypes: req.attachments?.map((attachment) => attachment.contentType) || [],
   }

@@ -123,6 +123,15 @@ export default function AnalyzeForm({
   const [deleteState, deleteAction, isDeleting] = useActionState(deleteUnsortedFileAction, null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
+  const analysisStatusLabel = (() => {
+    if (isAnalyzing) {
+      return "Running"
+    }
+    if (lastAnalysisStats?.status === "success") {
+      return "Completed"
+    }
+    return "Failed"
+  })()
 
   const fieldMap = useMemo(() => {
     return fields.reduce(
@@ -309,7 +318,7 @@ export default function AnalyzeForm({
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold">Analysis stats</span>
-              <Badge variant="outline">{isAnalyzing ? "Running" : lastAnalysisStats?.status === "success" ? "Completed" : "Failed"}</Badge>
+              <Badge variant="outline">{analysisStatusLabel}</Badge>
             </div>
             <span className="text-sm text-muted-foreground">
               {isAnalyzing ? `Elapsed ${formatElapsed(elapsedMs)}` : lastAnalysisStats ? `Last run ${formatElapsed(lastAnalysisStats.durationMs)}` : ""}
