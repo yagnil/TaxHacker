@@ -34,21 +34,21 @@ export async function selfHostedGetStartedAction(formData: FormData) {
   const provider = formData.get("provider") as string | null
 
   for (const key of apiKeys) {
-    const value = formData.get(key)
-    if (value) {
-      await updateSettings(user.id, key, value as string)
+    if (formData.has(key)) {
+      const value = formData.get(key)
+      await updateSettings(user.id, key, typeof value === "string" ? value : "")
     }
   }
 
   for (const key of otherSettings) {
-    const value = formData.get(key)
-    if (value) {
-      await updateSettings(user.id, key, value as string)
+    if (formData.has(key)) {
+      const value = formData.get(key)
+      await updateSettings(user.id, key, typeof value === "string" ? value : "")
     }
   }
 
   if (provider) {
-    const providerOrder = [provider, "openai", "google", "mistral", "local"].filter(
+    const providerOrder = [provider, "openai", "google", "mistral", "local", "ollama"].filter(
       (item, index, items) => items.indexOf(item) === index
     )
     await updateSettings(user.id, "llm_providers", providerOrder.join(","))

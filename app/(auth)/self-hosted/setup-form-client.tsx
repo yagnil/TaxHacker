@@ -25,17 +25,21 @@ export default function SelfHostedSetupFormClient({ defaultProvider, defaultProv
   const [model, setModel] = useState(getDefaultValues(provider).model || selected.defaultModelName)
   const [baseUrl, setBaseUrl] = useState(getDefaultValues(provider).baseUrl)
   const [backend, setBackend] = useState(getDefaultValues(provider).backend || selected.defaultBackend || "")
-  const userTyped = useRef(false)
+  const touched = useRef({ apiKey: false, model: false, baseUrl: false })
 
   useEffect(() => {
-    if (!userTyped.current) {
-      const defaults = getDefaultValues(provider)
+    const defaults = getDefaultValues(provider)
+    if (!touched.current.apiKey) {
       setApiKey(defaults.apiKey)
-      setModel(defaults.model || selected.defaultModelName)
-      setBaseUrl(defaults.baseUrl)
-      setBackend(defaults.backend || selected.defaultBackend || "")
     }
-    userTyped.current = false
+    if (!touched.current.model) {
+      setModel(defaults.model || selected.defaultModelName)
+    }
+    if (!touched.current.baseUrl) {
+      setBaseUrl(defaults.baseUrl)
+    }
+    setBackend(defaults.backend || selected.defaultBackend || "")
+    touched.current = { apiKey: false, model: false, baseUrl: false }
   }, [provider, getDefaultValues, selected.defaultBackend, selected.defaultModelName])
 
   const selectedBackend = selected.backendOptions?.find(option => option.value === backend)
@@ -72,11 +76,10 @@ export default function SelfHostedSetupFormClient({ defaultProvider, defaultProv
                 setBackend(value)
                 if (selected.key === "local") {
                   const matchingOption = selected.backendOptions?.find(option => option.value === value)
-                  if (matchingOption?.baseUrlPlaceholder && !userTyped.current) {
+                  if (matchingOption?.baseUrlPlaceholder && !touched.current.baseUrl) {
                     setBaseUrl(matchingOption.baseUrlPlaceholder)
                   }
                 }
-                userTyped.current = true
               }}
               items={selected.backendOptions.map(option => ({
                 code: option.value,
@@ -92,7 +95,7 @@ export default function SelfHostedSetupFormClient({ defaultProvider, defaultProv
                 value={apiKey ?? ""}
                 onChange={e => {
                   setApiKey(e.target.value)
-                  userTyped.current = true
+                  touched.current.apiKey = true
                 }}
                 placeholder={selectedBackend?.apiKeyPlaceholder || selected.placeholder}
               />
@@ -116,7 +119,7 @@ export default function SelfHostedSetupFormClient({ defaultProvider, defaultProv
               value={baseUrl ?? ""}
               onChange={e => {
                 setBaseUrl(e.target.value)
-                userTyped.current = true
+                touched.current.baseUrl = true
               }}
               placeholder={selectedBackend?.baseUrlPlaceholder || selected.baseUrlPlaceholder}
             />
@@ -127,7 +130,7 @@ export default function SelfHostedSetupFormClient({ defaultProvider, defaultProv
             value={model}
             onChange={e => {
               setModel(e.target.value)
-              userTyped.current = true
+              touched.current.model = true
             }}
             placeholder={selected.defaultModelName}
           />

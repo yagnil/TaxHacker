@@ -80,7 +80,8 @@ function normalizeBaseUrl(config: LLMConfig): string | undefined {
   }
 
   if (config.provider === "local" && config.localBackend === "lmstudio") {
-    return config.baseUrl.endsWith("/v1") ? config.baseUrl : `${config.baseUrl.replace(/\/+$/, "")}/v1`
+    const trimmedBaseUrl = config.baseUrl.replace(/\/+$/, "")
+    return trimmedBaseUrl.endsWith("/v1") ? trimmedBaseUrl : `${trimmedBaseUrl}/v1`
   }
 
   return config.baseUrl

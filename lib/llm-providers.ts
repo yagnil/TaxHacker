@@ -77,11 +77,11 @@ export const PROVIDERS = [
         apiKeyPlaceholder: "lm-studio",
       },
     ],
-    apiDoc: "https://lmstudio.ai/docs/app/api/endpoints/openai",
-    apiDocLabel: "Local LLM Setup",
+    apiDoc: "https://github.com/vas3k/TaxHacker#readme",
+    apiDocLabel: "TaxHacker setup guide",
     help: {
-      url: "https://lmstudio.ai/docs/app/api/endpoints/openai",
-      label: "LM Studio OpenAI API"
+      url: "https://github.com/vas3k/TaxHacker#readme",
+      label: "TaxHacker setup guide"
     },
     logo: "/logo/logo.svg"
   },

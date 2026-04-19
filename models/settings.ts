@@ -11,11 +11,7 @@ function hasUsableProviderSettings(provider: {
   baseUrl?: string
   model: string
 }) {
-  if (provider.provider === "ollama") {
-    return Boolean(provider.baseUrl && provider.model)
-  }
-
-  if (provider.provider === "local") {
+  if (provider.provider === "ollama" || provider.provider === "local") {
     return Boolean(provider.baseUrl && provider.model)
   }
 
@@ -68,6 +64,37 @@ export function getLLMSettings(settings: SettingsMap) {
 
 export function hasConfiguredLLMProvider(settings: SettingsMap) {
   return getLLMSettings(settings).providers.some(hasUsableProviderSettings)
+}
+
+export function hasUserConfiguredLLMProvider(settings: SettingsMap) {
+  const priorities = (settings.llm_providers || "openai,google,mistral,local")
+    .split(",")
+    .map((provider) => provider.trim())
+    .filter(Boolean)
+
+  return priorities.some((provider) => {
+    if (provider === "openai") {
+      return Boolean(settings.openai_api_key)
+    }
+
+    if (provider === "google") {
+      return Boolean(settings.google_api_key)
+    }
+
+    if (provider === "mistral") {
+      return Boolean(settings.mistral_api_key)
+    }
+
+    if (provider === "local") {
+      return Boolean(settings.local_llm_base_url && settings.local_llm_model_name)
+    }
+
+    if (provider === "ollama") {
+      return Boolean(settings.ollama_base_url && settings.ollama_model_name)
+    }
+
+    return false
+  })
 }
 
 export const getSettings = cache(async (userId: string): Promise<SettingsMap> => {
