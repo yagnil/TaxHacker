@@ -32,11 +32,17 @@ export default async function SelfHostedWelcomePage() {
     redirect(config.selfHosted.redirectUrl)
   }
 
-  const defaultProvider = PROVIDERS[0].key
-  const defaultApiKeys: Record<string, string> = {
-    openai: config.ai.openaiApiKey ?? "",
-    google: config.ai.googleApiKey ?? "",
-    mistral: config.ai.mistralApiKey ?? "",
+  const defaultProvider = "local"
+  const defaultProviderValues = {
+    openai: { apiKey: config.ai.openaiApiKey ?? "", model: config.ai.openaiModelName, baseUrl: "" },
+    google: { apiKey: config.ai.googleApiKey ?? "", model: config.ai.googleModelName, baseUrl: "" },
+    mistral: { apiKey: config.ai.mistralApiKey ?? "", model: config.ai.mistralModelName, baseUrl: "" },
+    local: {
+      apiKey: config.ai.localLlmApiKey ?? "",
+      model: config.ai.localLlmModelName,
+      baseUrl: config.ai.localLlmBaseUrl,
+      backend: config.ai.localLlmBackend,
+    },
   }
 
   return (
@@ -47,7 +53,7 @@ export default async function SelfHostedWelcomePage() {
       </CardTitle>
       <CardDescription className="flex flex-col gap-4 text-center text-lg">
         <p>Welcome to your own instance of TaxHacker. Let&apos;s set up a couple of settings to get started.</p>
-        <SelfHostedSetupFormClient defaultProvider={defaultProvider} defaultApiKeys={defaultApiKeys} />
+        <SelfHostedSetupFormClient defaultProvider={defaultProvider} defaultProviderValues={defaultProviderValues} />
       </CardDescription>
     </Card>
   )
