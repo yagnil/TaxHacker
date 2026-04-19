@@ -29,7 +29,6 @@ jobs:
       contents: read
       packages: read
     env:
-      DEPLOY_IMAGE: ${{ github.event_name == 'workflow_dispatch' && inputs.image != '' && inputs.image || format('ghcr.io/{0}/taxhacker:{1}', github.repository_owner, github.ref_name) }}
       PI_DEPLOY_DIR: /root/projects/taxhacker
       PI_COMPOSE_FILE: docker-compose.production.yml
       PI_ENV_FILE: .env
@@ -37,6 +36,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Resolve deploy image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.image }}" ]; then
+            echo "DEPLOY_IMAGE=${{ inputs.image }}" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          tag="${GITHUB_REF_NAME#v}"
+          echo "DEPLOY_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER}/taxhacker:${tag}" >> "$GITHUB_ENV"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
