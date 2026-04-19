@@ -26,11 +26,18 @@ import {
 } from "@dnd-kit/sortable"
 import { PROVIDERS } from "@/lib/llm-providers";
 
+type ProviderFormValues = {
+  apiKey: string
+  model: string
+  baseUrl: string
+  backend: string
+}
+
 
 function getInitialProviderOrder(settings: Record<string, string>) {
   let order: string[] = []
   if (!settings.llm_providers) {
-    order = ['openai', 'google', 'mistral']
+    order = ['openai', 'google', 'mistral', 'local']
   } else {
     order = settings.llm_providers.split(",").map(p => p.trim())
   }
@@ -51,17 +58,19 @@ export default function LLMSettingsForm({
 
   // Controlled values for each provider
   const [providerValues, setProviderValues] = useState(() => {
-    const values: Record<string, { apiKey: string; model: string }> = {}
+    const values: Record<string, ProviderFormValues> = {}
     PROVIDERS.forEach((provider) => {
       values[provider.key] = {
-        apiKey: settings[provider.apiKeyName],
+        apiKey: provider.apiKeyName ? settings[provider.apiKeyName] || "" : "",
         model: settings[provider.modelName] || provider.defaultModelName,
+        baseUrl: provider.baseUrlName ? settings[provider.baseUrlName] || provider.baseUrlPlaceholder || "" : "",
+        backend: provider.backendName ? settings[provider.backendName] || provider.defaultBackend || "" : "",
       }
     })
     return values
   })
 
-  function handleProviderValueChange(providerKey: string, field: "apiKey" | "model", value: string) {
+  function handleProviderValueChange(providerKey: string, field: keyof ProviderFormValues, value: string) {
     setProviderValues((prev) => ({
       ...prev,
       [providerKey]: {
@@ -141,8 +150,8 @@ export default function LLMSettingsForm({
 type DndProviderBlocksProps = {
   providerOrder: string[];
   setProviderOrder: React.Dispatch<React.SetStateAction<string[]>>;
-  providerValues: Record<string, { apiKey: string; model: string }>;
-  handleProviderValueChange: (providerKey: string, field: "apiKey" | "model", value: string) => void;
+  providerValues: Record<string, ProviderFormValues>;
+  handleProviderValueChange: (providerKey: string, field: keyof ProviderFormValues, value: string) => void;
 };
 
 function DndProviderBlocks({ providerOrder, setProviderOrder, providerValues, handleProviderValueChange }: DndProviderBlocksProps) {
@@ -176,8 +185,8 @@ type SortableProviderBlockProps = {
   id: string;
   idx: number;
   providerKey: string;
-  value: { apiKey: string; model: string };
-  handleValueChange: (providerKey: string, field: "apiKey" | "model", value: string) => void;
+  value: ProviderFormValues;
+  handleValueChange: (providerKey: string, field: keyof ProviderFormValues, value: string) => void;
 };
 
 function SortableProviderBlock({ id, idx, providerKey, value, handleValueChange }: SortableProviderBlockProps) {
@@ -185,6 +194,7 @@ function SortableProviderBlock({ id, idx, providerKey, value, handleValueChange 
 
   const provider = PROVIDERS.find(p => p.key === providerKey)
   if (!provider) return null
+  const selectedBackend = provider.backendOptions?.find(option => option.value === value.backend)
   return (
     <div
       ref={setNodeRef}
@@ -207,15 +217,52 @@ function SortableProviderBlock({ id, idx, providerKey, value, handleValueChange 
         </span>
         <span className="font-semibold">{provider.label}</span>
       </div>
-      <div className="flex flex-row gap-4 items-center">
-        <input
-          type="text"
-          name={provider.apiKeyName}
-          value={value.apiKey}
-          onChange={e => handleValueChange(provider.key, "apiKey", e.target.value)}
-          className="flex-1 border rounded px-2 py-1"
-          placeholder="API key"
-        />
+      <div className="flex flex-col gap-3">
+        {provider.backendName && provider.backendOptions && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">{provider.backendLabel || "Backend"}</span>
+            <select
+              name={provider.backendName}
+              value={value.backend}
+              onChange={e => handleValueChange(provider.key, "backend", e.target.value)}
+              className="flex-1 border rounded px-2 py-1 bg-background"
+            >
+              {provider.backendOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {provider.apiKeyName && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">{provider.apiKeyLabel || "API Key"}</span>
+            <input
+              type="text"
+              name={provider.apiKeyName}
+              value={value.apiKey}
+              onChange={e => handleValueChange(provider.key, "apiKey", e.target.value)}
+              className="flex-1 border rounded px-2 py-1"
+              placeholder={selectedBackend?.apiKeyPlaceholder || provider.placeholder || "API key"}
+            />
+          </label>
+        )}
+        {provider.baseUrlName && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">{provider.baseUrlLabel || "Base URL"}</span>
+            <input
+              type="text"
+              name={provider.baseUrlName}
+              value={value.baseUrl}
+              onChange={e => handleValueChange(provider.key, "baseUrl", e.target.value)}
+              className="flex-1 border rounded px-2 py-1"
+              placeholder={selectedBackend?.baseUrlPlaceholder || provider.baseUrlPlaceholder || "http://127.0.0.1:11434"}
+            />
+          </label>
+        )}
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium">Model</span>
         <input
           type="text"
           name={provider.modelName}
@@ -224,10 +271,11 @@ function SortableProviderBlock({ id, idx, providerKey, value, handleValueChange 
           className="flex-1 border rounded px-2 py-1"
           placeholder="Model name"
         />
+        </label>
       </div>
       {provider.apiDoc && (
         <small className="text-muted-foreground">
-          Get your API key from{" "}
+          {provider.key === "local" ? "Point this at your Ollama or LM Studio server. Learn more at " : provider.apiKeyName ? "Get your API key from " : "Learn more at "}
           <a
             href={provider.apiDoc}
             target="_blank"

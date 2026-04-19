@@ -18,8 +18,24 @@ export async function analyzeTransaction(
   fileId: string,
   userId: string
 ): Promise<ActionState<AnalysisResult>> {
+  const startedAt = Date.now()
   const settings = await getSettings(userId)
   const llmSettings = getLLMSettings(settings)
+
+  console.info("Analyze transaction start:", {
+    fileId,
+    userId,
+    providerOrder: llmSettings.providers.map((provider) => ({
+      provider: provider.provider,
+      model: provider.model,
+      localBackend: provider.localBackend,
+      baseUrl: provider.baseUrl,
+    })),
+    promptLength: prompt.length,
+    schemaPropertyCount: Object.keys(schema.properties as Record<string, unknown> | undefined || {}).length,
+    attachmentCount: attachments.length,
+    attachmentTypes: attachments.map((attachment) => attachment.contentType),
+  })
 
   try {
     const response = await requestLLM(llmSettings, {
@@ -37,6 +53,12 @@ export async function analyzeTransaction(
 
     console.log("LLM response:", result)
     console.log("LLM tokens used:", tokensUsed)
+    console.info("Analyze transaction success:", {
+      fileId,
+      durationMs: Date.now() - startedAt,
+      outputKeys: Object.keys(result),
+      tokensUsed,
+    })
 
     await updateFile(fileId, userId, { cachedParseResult: result })
 
@@ -48,7 +70,13 @@ export async function analyzeTransaction(
       },
     }
   } catch (error) {
-    console.error("AI Analysis error:", error)
+    console.error("AI Analysis error:", {
+      fileId,
+      durationMs: Date.now() - startedAt,
+      errorMessage: error instanceof Error ? error.message : "Failed to analyze invoice",
+      errorName: error instanceof Error ? error.name : undefined,
+      error,
+    })
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to analyze invoice",

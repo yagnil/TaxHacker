@@ -1,44 +1,73 @@
 import { prisma } from "@/lib/db"
-import { PROVIDERS } from "@/lib/llm-providers"
+import { getProviderByKey } from "@/lib/llm-providers"
 import { cache } from "react"
-import { LLMProvider } from "@/ai/providers/llmProvider"
+import { LLMProvider, LocalLLMBackend } from "@/ai/providers/llmProvider"
 
 export type SettingsMap = Record<string, string>
+
+function hasUsableProviderSettings(provider: {
+  provider: LLMProvider
+  apiKey?: string
+  baseUrl?: string
+  model: string
+}) {
+  if (provider.provider === "ollama") {
+    return Boolean(provider.baseUrl && provider.model)
+  }
+
+  if (provider.provider === "local") {
+    return Boolean(provider.baseUrl && provider.model)
+  }
+
+  return Boolean(provider.apiKey && provider.model)
+}
 
 /**
  * Helper to extract LLM provider settings from SettingsMap.
  */
 export function getLLMSettings(settings: SettingsMap) {
-  const priorities = (settings.llm_providers || "openai,google,mistral").split(",").map(p => p.trim()).filter(Boolean)
+  const priorities = (settings.llm_providers || "openai,google,mistral,local")
+    .split(",")
+    .map((provider) => provider.trim())
+    .filter(Boolean)
 
-  const providers = priorities.map((provider) => {
-    if (provider === "openai") {
-      return {
-        provider: provider as LLMProvider,
-        apiKey: settings.openai_api_key || "",
-        model: settings.openai_model_name || PROVIDERS[0]['defaultModelName'],
+  const providers = priorities
+    .map((providerKey) => {
+      if (providerKey === "ollama") {
+        return {
+          provider: "ollama" as LLMProvider,
+          apiKey: "",
+          baseUrl: settings.ollama_base_url || "http://127.0.0.1:11434",
+          model: settings.ollama_model_name || "gemma3:4b",
+        }
       }
-    }
-    if (provider === "google") {
-      return {
-        provider: provider as LLMProvider,
-        apiKey: settings.google_api_key || "",
-        model: settings.google_model_name || PROVIDERS[1]['defaultModelName'],
+
+      const providerDefinition = getProviderByKey(providerKey)
+      if (!providerDefinition) {
+        return null
       }
-    }
-    if (provider === "mistral") {
+
       return {
-        provider: provider as LLMProvider,
-        apiKey: settings.mistral_api_key || "",
-        model: settings.mistral_model_name || PROVIDERS[2]['defaultModelName'],
+        provider: providerKey as LLMProvider,
+        apiKey: providerDefinition.apiKeyName ? settings[providerDefinition.apiKeyName] || "" : "",
+        baseUrl: providerDefinition.baseUrlName
+          ? settings[providerDefinition.baseUrlName] || providerDefinition.baseUrlPlaceholder || ""
+          : undefined,
+        model: settings[providerDefinition.modelName] || providerDefinition.defaultModelName,
+        localBackend: providerDefinition.backendName
+          ? ((settings[providerDefinition.backendName] || providerDefinition.defaultBackend) as LocalLLMBackend)
+          : undefined,
       }
-    }
-    return null
-  }).filter((provider): provider is NonNullable<typeof provider> => provider !== null)
+    })
+    .filter((provider): provider is NonNullable<typeof provider> => provider !== null)
 
   return {
     providers,
   }
+}
+
+export function hasConfiguredLLMProvider(settings: SettingsMap) {
+  return getLLMSettings(settings).providers.some(hasUsableProviderSettings)
 }
 
 export const getSettings = cache(async (userId: string): Promise<SettingsMap> => {
