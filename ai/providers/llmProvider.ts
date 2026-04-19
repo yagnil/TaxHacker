@@ -22,7 +22,7 @@ export interface LLMSettings {
 export interface LLMRequest {
   prompt: string
   schema?: Record<string, unknown>
-  attachments?: any[]
+  attachments?: LLMAttachment[]
 }
 
 export interface LLMResponse {
@@ -30,6 +30,39 @@ export interface LLMResponse {
   tokensUsed?: number
   provider: LLMProvider
   error?: string
+}
+
+interface LLMAttachment {
+  contentType: string
+  base64: string
+}
+
+type MultiModalMessagePart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } }
+
+function extractResponseText(content: unknown): string {
+  if (typeof content === "string") {
+    return content
+  }
+
+  if (!Array.isArray(content)) {
+    return String(content || "")
+  }
+
+  return content
+    .map((part) => {
+      if (typeof part === "string") {
+        return part
+      }
+
+      if (typeof part === "object" && part !== null && "text" in part && typeof part.text === "string") {
+        return part.text
+      }
+
+      return ""
+    })
+    .join("\n")
 }
 
 function summarizeRequest(req: LLMRequest) {
@@ -83,7 +116,7 @@ async function requestLLMUnified(config: LLMConfig, req: LLMRequest): Promise<LL
   const baseUrl = normalizeBaseUrl(config)
   try {
     const temperature = 0
-    let model: any
+    let model: ChatOpenAI | ChatGoogleGenerativeAI | ChatMistralAI | ChatOllama
     const shouldUseNativeStructuredOutput = !(config.provider === "local" && config.localBackend === "lmstudio")
     console.info("LLM request start:", {
       provider: config.provider,
@@ -146,28 +179,22 @@ async function requestLLMUnified(config: LLMConfig, req: LLMRequest): Promise<LL
       }
     }
 
-    let message_content: any = req.attachments && req.attachments.length > 0
-      ? [{ type: "text", text: req.prompt }]
+    const messageContent: string | MultiModalMessagePart[] = req.attachments && req.attachments.length > 0
+      ? [
+          { type: "text", text: req.prompt },
+          ...req.attachments.map((att) => ({
+            type: "image_url" as const,
+            image_url: {
+              url: `data:${att.contentType};base64,${att.base64}`,
+            },
+          })),
+        ]
       : req.prompt
-
-    if (req.attachments && req.attachments.length > 0) {
-      const images = req.attachments.map((att) => ({
-        type: "image_url",
-        image_url: {
-          url: `data:${att.contentType};base64,${att.base64}`,
-        },
-      }))
-      message_content.push(...images)
-    }
-    const messages: BaseMessage[] = [new HumanMessage({ content: message_content })]
+    const messages: BaseMessage[] = [new HumanMessage({ content: messageContent })]
 
     if (!shouldUseNativeStructuredOutput) {
       const response = await model.invoke(messages)
-      const responseText = Array.isArray(response.content)
-        ? response.content
-            .map((part: any) => (typeof part === "string" ? part : part?.text || ""))
-            .join("\n")
-        : String(response.content || "")
+      const responseText = extractResponseText(response.content)
       const parsed = extractJsonObjectFromText(responseText)
 
       if (!parsed) {
@@ -197,6 +224,14 @@ async function requestLLMUnified(config: LLMConfig, req: LLMRequest): Promise<LL
       }
     }
 
+    if (!req.schema) {
+      return {
+        output: {},
+        provider: config.provider,
+        error: "Schema is required for structured output requests",
+      }
+    }
+
     const structuredModel = model.withStructuredOutput(req.schema, { name: "transaction" })
     const response = await structuredModel.invoke(messages)
 
@@ -211,18 +246,22 @@ async function requestLLMUnified(config: LLMConfig, req: LLMRequest): Promise<LL
       output: response,
       provider: config.provider,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorDetails = typeof error === "object" && error !== null ? error : null
     console.error("LLM request failed:", {
       provider: config.provider,
       model: config.model,
       localBackend: config.localBackend,
       baseUrl,
       durationMs: Date.now() - startedAt,
-      errorName: error?.name,
+      errorName: errorDetails && "name" in errorDetails ? errorDetails.name : undefined,
       errorMessage: error instanceof Error ? error.message : `${config.provider} request failed`,
-      errorStatus: error?.status,
-      errorCode: error?.code,
-      errorCauseMessage: error?.cause?.message,
+      errorStatus: errorDetails && "status" in errorDetails ? errorDetails.status : undefined,
+      errorCode: errorDetails && "code" in errorDetails ? errorDetails.code : undefined,
+      errorCauseMessage:
+        errorDetails && "cause" in errorDetails && typeof errorDetails.cause === "object" && errorDetails.cause !== null && "message" in errorDetails.cause
+          ? errorDetails.cause.message
+          : undefined,
     })
     return {
       output: {},
