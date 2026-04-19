@@ -29,6 +29,9 @@ const envSchema = z.object({
 })
 
 const env = envSchema.parse(process.env)
+const localLlmBackend = env.LOCAL_LLM_BACKEND || "ollama"
+const localLlmBaseUrl =
+  env.LOCAL_LLM_BASE_URL || (localLlmBackend === "lmstudio" ? "http://127.0.0.1:1234/v1" : env.OLLAMA_BASE_URL)
 
 const config = {
   app: {
@@ -65,9 +68,9 @@ const config = {
     googleModelName: env.GOOGLE_MODEL_NAME,
     mistralApiKey: env.MISTRAL_API_KEY,
     mistralModelName: env.MISTRAL_MODEL_NAME,
-    localLlmBackend: env.LOCAL_LLM_BACKEND || "ollama",
+    localLlmBackend,
     localLlmApiKey: env.LOCAL_LLM_API_KEY || "",
-    localLlmBaseUrl: env.LOCAL_LLM_BASE_URL || env.OLLAMA_BASE_URL,
+    localLlmBaseUrl,
     localLlmModelName: env.LOCAL_LLM_MODEL_NAME || env.OLLAMA_MODEL_NAME,
     ollamaBaseUrl: env.OLLAMA_BASE_URL,
     ollamaModelName: env.OLLAMA_MODEL_NAME,

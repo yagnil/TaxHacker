@@ -32,7 +32,7 @@ export async function analyzeTransaction(
       baseUrl: provider.baseUrl,
     })),
     promptLength: prompt.length,
-    schemaPropertyCount: Object.keys(schema.properties as Record<string, unknown> | undefined || {}).length,
+    schemaPropertyCount: Object.keys((schema.properties ?? {}) as Record<string, unknown>).length,
     attachmentCount: attachments.length,
     attachmentTypes: attachments.map((attachment) => attachment.contentType),
   })
@@ -75,7 +75,6 @@ export async function analyzeTransaction(
       durationMs: Date.now() - startedAt,
       errorMessage: error instanceof Error ? error.message : "Failed to analyze invoice",
       errorName: error instanceof Error ? error.name : undefined,
-      error,
     })
     return {
       success: false,

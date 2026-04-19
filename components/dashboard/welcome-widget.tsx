@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardTitle } from "@/components/ui/card"
 import { ColoredText } from "@/components/ui/colored-text"
 import { getCurrentUser } from "@/lib/auth"
-import { getSettings, hasConfiguredLLMProvider, updateSettings } from "@/models/settings"
+import { getSettings, hasUserConfiguredLLMProvider, updateSettings } from "@/models/settings"
 import { Banknote, ChartBarStacked, FolderOpenDot, Key, TextCursorInput, X } from "lucide-react"
 import { revalidatePath } from "next/cache"
 import Image from "next/image"
@@ -11,7 +11,7 @@ import Link from "next/link"
 export async function WelcomeWidget() {
   const user = await getCurrentUser()
   const settings = await getSettings(user.id)
-  const hasConfiguredProvider = hasConfiguredLLMProvider(settings)
+  const hasConfiguredProvider = hasUserConfiguredLLMProvider(settings)
 
   return (
     <Card className="flex flex-col lg:flex-row items-start gap-10 p-10 w-full">

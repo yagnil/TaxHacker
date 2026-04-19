@@ -36,49 +36,51 @@ function getActiveProviderStats(settings: Record<string, string>) {
     .filter(Boolean)
 
   for (const provider of providerOrder) {
-    if (provider === "openai" && settings.openai_api_key && settings.openai_model_name) {
+    if (provider === "openai" && settings.openai_api_key) {
       return {
         providerLabel: "OpenAI",
-        model: settings.openai_model_name,
+        model: settings.openai_model_name || "gpt-4o-mini",
         endpointLabel: "Cloud API",
         reasoningLabel: "Managed by provider",
       }
     }
 
-    if (provider === "google" && settings.google_api_key && settings.google_model_name) {
+    if (provider === "google" && settings.google_api_key) {
       return {
         providerLabel: "Google",
-        model: settings.google_model_name,
+        model: settings.google_model_name || "gemini-2.5-flash",
         endpointLabel: "Cloud API",
         reasoningLabel: "Managed by provider",
       }
     }
 
-    if (provider === "mistral" && settings.mistral_api_key && settings.mistral_model_name) {
+    if (provider === "mistral" && settings.mistral_api_key) {
       return {
         providerLabel: "Mistral",
-        model: settings.mistral_model_name,
+        model: settings.mistral_model_name || "mistral-medium-latest",
         endpointLabel: "Cloud API",
         reasoningLabel: "Managed by provider",
       }
     }
 
-    if (provider === "local" && settings.local_llm_base_url && settings.local_llm_model_name) {
+    if (provider === "local") {
       const backend = settings.local_llm_backend || "ollama"
       const backendLabel = backend === "lmstudio" ? "LM Studio" : "Ollama"
+      const endpointLabel =
+        settings.local_llm_base_url || (backend === "lmstudio" ? "http://127.0.0.1:1234/v1" : "http://127.0.0.1:11434")
       return {
         providerLabel: `Local LLM (${backendLabel})`,
-        model: settings.local_llm_model_name,
-        endpointLabel: settings.local_llm_base_url,
+        model: settings.local_llm_model_name || "gemma3:4b",
+        endpointLabel,
         reasoningLabel: backend === "lmstudio" ? "Disabled for this request" : "Model default",
       }
     }
 
-    if (provider === "ollama" && settings.ollama_base_url && settings.ollama_model_name) {
+    if (provider === "ollama") {
       return {
         providerLabel: "Ollama",
-        model: settings.ollama_model_name,
-        endpointLabel: settings.ollama_base_url,
+        model: settings.ollama_model_name || "gemma3:4b",
+        endpointLabel: settings.ollama_base_url || "http://127.0.0.1:11434",
         reasoningLabel: "Model default",
       }
     }
@@ -121,6 +123,15 @@ export default function AnalyzeForm({
   const [deleteState, deleteAction, isDeleting] = useActionState(deleteUnsortedFileAction, null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
+  const analysisStatusLabel = (() => {
+    if (isAnalyzing) {
+      return "Running"
+    }
+    if (lastAnalysisStats?.status === "success") {
+      return "Completed"
+    }
+    return "Failed"
+  })()
 
   const fieldMap = useMemo(() => {
     return fields.reduce(
@@ -181,9 +192,12 @@ export default function AnalyzeForm({
   }, [file.createdAt, formData.issuedAt])
   const activeProviderStats = useMemo(() => getActiveProviderStats(settings), [settings])
   const fileSize = useMemo(() => {
-    return file.metadata && typeof file.metadata === "object" && "size" in file.metadata
-      ? Number(file.metadata.size)
-      : 0
+    const parsedSize =
+      file.metadata && typeof file.metadata === "object" && "size" in file.metadata
+        ? Number(file.metadata.size)
+        : 0
+
+    return Number.isFinite(parsedSize) && parsedSize >= 0 ? parsedSize : 0
   }, [file.metadata])
   const analysisScopeStats = useMemo(() => {
     const visibleFieldCount = fields.filter((field) => field.isVisibleInAnalysis).length
@@ -304,7 +318,7 @@ export default function AnalyzeForm({
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold">Analysis stats</span>
-              <Badge variant="outline">{isAnalyzing ? "Running" : lastAnalysisStats?.status === "success" ? "Completed" : "Failed"}</Badge>
+              <Badge variant="outline">{analysisStatusLabel}</Badge>
             </div>
             <span className="text-sm text-muted-foreground">
               {isAnalyzing ? `Elapsed ${formatElapsed(elapsedMs)}` : lastAnalysisStats ? `Last run ${formatElapsed(lastAnalysisStats.durationMs)}` : ""}

@@ -68,7 +68,7 @@ function extractResponseText(content: unknown): string {
 function summarizeRequest(req: LLMRequest) {
   return {
     promptLength: req.prompt.length,
-    schemaKeys: Object.keys(req.schema?.properties as Record<string, unknown> | undefined || {}).length,
+    schemaKeys: Object.keys((req.schema?.properties ?? {}) as Record<string, unknown>).length,
     attachmentCount: req.attachments?.length || 0,
     attachmentTypes: req.attachments?.map((attachment) => attachment.contentType) || [],
   }
@@ -80,7 +80,8 @@ function normalizeBaseUrl(config: LLMConfig): string | undefined {
   }
 
   if (config.provider === "local" && config.localBackend === "lmstudio") {
-    return config.baseUrl.endsWith("/v1") ? config.baseUrl : `${config.baseUrl.replace(/\/+$/, "")}/v1`
+    const trimmedBaseUrl = config.baseUrl.replace(/\/+$/, "")
+    return trimmedBaseUrl.endsWith("/v1") ? trimmedBaseUrl : `${trimmedBaseUrl}/v1`
   }
 
   return config.baseUrl
