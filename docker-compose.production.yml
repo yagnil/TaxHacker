@@ -9,11 +9,15 @@ services:
       - BASE_URL=https://taxhacker.app
       - SELF_HOSTED_MODE=false
       - UPLOAD_PATH=/app/data/uploads
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/taxhacker}
     env_file:
       - .env
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -29,6 +33,34 @@ services:
       interval: 30s
       timeout: 10s
       start_period: 40s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100M"
+        max-file: "3"
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: taxhacker-postgres
+    networks:
+      - taxhacker_network
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-taxhacker}
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-taxhacker}",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
       retries: 5
     logging:
       driver: "json-file"

@@ -5,6 +5,7 @@ PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.production.yml}
 ENV_FILE=${ENV_FILE:-.env}
 APP_SERVICE=${APP_SERVICE:-app}
+STACK_SERVICES=${STACK_SERVICES:-postgres app}
 HEALTH_TIMEOUT=${HEALTH_TIMEOUT:-180}
 
 if [ "$#" -lt 1 ]; then
@@ -85,8 +86,8 @@ wait_for_healthy() {
 rollback() {
   echo "Deployment failed. Restoring previous image..." >&2
   cp "$BACKUP_FILE" "$ENV_FILE"
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull "$APP_SERVICE" || true
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull $STACK_SERVICES || true
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d $STACK_SERVICES
   wait_for_healthy "$APP_SERVICE" || true
 }
 
@@ -99,8 +100,8 @@ fi
 
 set_target_image "$TARGET_IMAGE"
 
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull "$APP_SERVICE"
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull $STACK_SERVICES
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d $STACK_SERVICES
 
 if ! wait_for_healthy "$APP_SERVICE"; then
   rollback
