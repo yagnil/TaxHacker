@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
       packages: read
     env:
       PI_DEPLOY_DIR: /root/projects/taxhacker
@@ -79,10 +80,11 @@ jobs:
           exit 1
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@v3
+        uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          ping: ${{ secrets.PI_HOST }}
           tags: tag:ci
 
       - name: Start SSH agent
