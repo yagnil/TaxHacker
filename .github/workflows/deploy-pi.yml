@@ -169,6 +169,42 @@ jobs:
           ./scripts/deploy-with-rollback.sh "${DEPLOY_IMAGE}"
           EOF
 
+      - name: Verify deployed app is reachable on Raspberry Pi
+        shell: bash
+        env:
+          PI_HOST: ${{ secrets.PI_HOST }}
+          PI_USER: ${{ secrets.PI_USER }}
+        run: |
+          set -euo pipefail
+
+          ssh "${PI_USER}@${PI_HOST}" \
+            PI_DEPLOY_DIR="${PI_DEPLOY_DIR}" \
+            PI_COMPOSE_FILE="${PI_COMPOSE_FILE}" \
+            PI_ENV_FILE="${PI_ENV_FILE}" \
+            'sh -se' <<'EOF'
+          set -euo pipefail
+
+          cd "${PI_DEPLOY_DIR}"
+
+          echo "== docker compose ps =="
+          docker compose --env-file "${PI_ENV_FILE}" -f "${PI_COMPOSE_FILE}" ps
+
+          echo "== local app check =="
+          curl -fsSIL http://127.0.0.1:7331 >/dev/null
+
+          echo "== listening sockets =="
+          ss -ltn | grep ':7331' || true
+          EOF
+
+      - name: Verify app is reachable over the network
+        shell: bash
+        env:
+          PI_HOST: ${{ secrets.PI_HOST }}
+        run: |
+          set -euo pipefail
+
+          curl -fsSIL "http://${PI_HOST}:7331" >/dev/null
+
       - name: Collect Raspberry Pi diagnostics on failure
         if: failure()
         shell: bash

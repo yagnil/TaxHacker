@@ -10,9 +10,9 @@ import { FormSelectProject } from "@/components/forms/select-project"
 import { FormSelectType } from "@/components/forms/select-type"
 import { FormInput, FormTextarea } from "@/components/forms/simple"
 import { Button } from "@/components/ui/button"
+import { formatDateOnly } from "@/lib/utils"
 import { TransactionData } from "@/models/transactions"
 import { Category, Currency, Field, Project, Transaction } from "@/prisma/client"
-import { format } from "date-fns"
 import { Loader2, Save, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { startTransition, useActionState, useEffect, useMemo, useState } from "react"
@@ -48,7 +48,7 @@ export default function TransactionEditForm({
     type: transaction.type || "expense",
     categoryCode: transaction.categoryCode || settings.default_category,
     projectCode: transaction.projectCode || settings.default_project,
-    issuedAt: transaction.issuedAt ? format(transaction.issuedAt, "yyyy-MM-dd") : "",
+    issuedAt: transaction.issuedAt ? formatDateOnly(transaction.issuedAt) : "",
     note: transaction.note || "",
     items: transaction.items || [],
     ...extraFields.reduce(
