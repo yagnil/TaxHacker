@@ -90,6 +90,32 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.PI_SSH_KEY }}
 
+      - name: Verify Raspberry Pi network reachability
+        shell: bash
+        env:
+          PI_HOST: ${{ secrets.PI_HOST }}
+        run: |
+          set -euo pipefail
+
+          echo "Checking host: ${PI_HOST}"
+
+          echo "== getent =="
+          getent hosts "${PI_HOST}" || true
+
+          echo "== nslookup =="
+          nslookup "${PI_HOST}" || true
+
+          echo "== ping =="
+          ping -c 3 "${PI_HOST}" || true
+
+          echo "== tcp 22 =="
+          if timeout 10 bash -lc "</dev/tcp/${PI_HOST}/22"; then
+            echo "Port 22 is reachable on ${PI_HOST}"
+          else
+            echo "Port 22 is not reachable on ${PI_HOST}" >&2
+            exit 1
+          fi
+
       - name: Add Raspberry Pi to known hosts
         shell: bash
         run: |
