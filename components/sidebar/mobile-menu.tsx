@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSidebar } from "@/components/ui/sidebar"
-import config from "@/lib/config"
+import config from "@/lib/public-config"
 import Link from "next/link"
 
 export default function MobileMenu({ unsortedFilesCount }: { unsortedFilesCount: number }) {

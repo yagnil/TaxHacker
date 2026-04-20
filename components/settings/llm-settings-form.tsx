@@ -30,14 +30,13 @@ type ProviderFormValues = {
   apiKey: string
   model: string
   baseUrl: string
-  backend: string
 }
 
 
 function getInitialProviderOrder(settings: Record<string, string>) {
   let order: string[] = []
   if (!settings.llm_providers) {
-    order = ['openai', 'google', 'mistral', 'local']
+    order = ['openai', 'google', 'mistral', 'ollama']
   } else {
     order = settings.llm_providers.split(",").map(p => p.trim())
   }
@@ -64,7 +63,6 @@ export default function LLMSettingsForm({
         apiKey: provider.apiKeyName ? settings[provider.apiKeyName] || "" : "",
         model: settings[provider.modelName] || provider.defaultModelName,
         baseUrl: provider.baseUrlName ? settings[provider.baseUrlName] || provider.baseUrlPlaceholder || "" : "",
-        backend: provider.backendName ? settings[provider.backendName] || provider.defaultBackend || "" : "",
       }
     })
     return values
@@ -166,10 +164,11 @@ function DndProviderBlocks({ providerOrder, setProviderOrder, providerValues, ha
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={providerOrder} strategy={verticalListSortingStrategy}>
-        {providerOrder.map((providerKey) => (
+        {providerOrder.map((providerKey, idx) => (
           <SortableProviderBlock
             key={providerKey}
             id={providerKey}
+            idx={idx}
             providerKey={providerKey}
             value={providerValues[providerKey]}
             handleValueChange={handleProviderValueChange}
@@ -182,17 +181,17 @@ function DndProviderBlocks({ providerOrder, setProviderOrder, providerValues, ha
 
 type SortableProviderBlockProps = {
   id: string;
+  idx: number;
   providerKey: string;
   value: ProviderFormValues;
   handleValueChange: (providerKey: string, field: keyof ProviderFormValues, value: string) => void;
 };
 
-function SortableProviderBlock({ id, providerKey, value, handleValueChange }: SortableProviderBlockProps) {
+function SortableProviderBlock({ id, idx, providerKey, value, handleValueChange }: SortableProviderBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
 
   const provider = PROVIDERS.find(p => p.key === providerKey)
   if (!provider) return null
-  const selectedBackend = provider.backendOptions?.find(option => option.value === value.backend)
   return (
     <div
       ref={setNodeRef}
@@ -216,23 +215,6 @@ function SortableProviderBlock({ id, providerKey, value, handleValueChange }: So
         <span className="font-semibold">{provider.label}</span>
       </div>
       <div className="flex flex-col gap-3">
-        {provider.backendName && provider.backendOptions && (
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">{provider.backendLabel || "Backend"}</span>
-            <select
-              name={provider.backendName}
-              value={value.backend}
-              onChange={e => handleValueChange(provider.key, "backend", e.target.value)}
-              className="flex-1 border rounded px-2 py-1 bg-background"
-            >
-              {provider.backendOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         {provider.apiKeyName && (
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">{provider.apiKeyLabel || "API Key"}</span>
@@ -242,7 +224,7 @@ function SortableProviderBlock({ id, providerKey, value, handleValueChange }: So
               value={value.apiKey}
               onChange={e => handleValueChange(provider.key, "apiKey", e.target.value)}
               className="flex-1 border rounded px-2 py-1"
-              placeholder={selectedBackend?.apiKeyPlaceholder || provider.placeholder || "API key"}
+              placeholder={provider.placeholder || "API key"}
             />
           </label>
         )}
@@ -255,7 +237,7 @@ function SortableProviderBlock({ id, providerKey, value, handleValueChange }: So
               value={value.baseUrl}
               onChange={e => handleValueChange(provider.key, "baseUrl", e.target.value)}
               className="flex-1 border rounded px-2 py-1"
-              placeholder={selectedBackend?.baseUrlPlaceholder || provider.baseUrlPlaceholder || "http://127.0.0.1:11434"}
+              placeholder={provider.baseUrlPlaceholder || "http://127.0.0.1:11434"}
             />
           </label>
         )}
@@ -273,7 +255,7 @@ function SortableProviderBlock({ id, providerKey, value, handleValueChange }: So
       </div>
       {provider.apiDoc && (
         <small className="text-muted-foreground">
-          {provider.key === "local" ? "Point this at your Ollama or LM Studio server. Learn more at " : provider.apiKeyName ? "Get your API key from " : "Learn more at "}
+          {provider.apiKeyName ? "Get your API key from " : "Learn more at "}
           <a
             href={provider.apiDoc}
             target="_blank"

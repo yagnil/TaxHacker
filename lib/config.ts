@@ -10,15 +10,11 @@ const envSchema = z.object({
   GOOGLE_MODEL_NAME: z.string().default("gemini-2.5-flash"),
   MISTRAL_API_KEY: z.string().optional(),
   MISTRAL_MODEL_NAME: z.string().default("mistral-medium-latest"),
-  LOCAL_LLM_BACKEND: z.enum(["ollama", "lmstudio"]).optional(),
-  LOCAL_LLM_API_KEY: z.string().optional(),
-  LOCAL_LLM_BASE_URL: z.string().url().optional(),
-  LOCAL_LLM_MODEL_NAME: z.string().optional(),
   OLLAMA_BASE_URL: z.string().url().default("http://127.0.0.1:11434"),
   OLLAMA_MODEL_NAME: z.string().default("gemma3:4b"),
   BETTER_AUTH_SECRET: z
     .string()
-    .min(32, "Auth secret must be at least 32 characters")
+    .min(16, "Auth secret must be at least 16 characters")
     .default("please-set-your-key-here"),
   DISABLE_SIGNUP: z.enum(["true", "false"]).default("false"),
   RESEND_API_KEY: z.string().default("please-set-your-resend-api-key-here"),
@@ -29,9 +25,6 @@ const envSchema = z.object({
 })
 
 const env = envSchema.parse(process.env)
-const localLlmBackend = env.LOCAL_LLM_BACKEND || "ollama"
-const localLlmBaseUrl =
-  env.LOCAL_LLM_BASE_URL || (localLlmBackend === "lmstudio" ? "http://127.0.0.1:1234/v1" : env.OLLAMA_BASE_URL)
 
 const config = {
   app: {
@@ -68,10 +61,6 @@ const config = {
     googleModelName: env.GOOGLE_MODEL_NAME,
     mistralApiKey: env.MISTRAL_API_KEY,
     mistralModelName: env.MISTRAL_MODEL_NAME,
-    localLlmBackend,
-    localLlmApiKey: env.LOCAL_LLM_API_KEY || "",
-    localLlmBaseUrl,
-    localLlmModelName: env.LOCAL_LLM_MODEL_NAME || env.OLLAMA_MODEL_NAME,
     ollamaBaseUrl: env.OLLAMA_BASE_URL,
     ollamaModelName: env.OLLAMA_MODEL_NAME,
   },

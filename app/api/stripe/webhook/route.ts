@@ -1,5 +1,6 @@
 import config from "@/lib/config"
-import { PLANS, stripeClient } from "@/lib/stripe"
+import { stripeClient } from "@/lib/stripe"
+import { PLANS } from "@/lib/stripe-plans"
 import { createUserDefaults, isDatabaseEmpty } from "@/models/defaults"
 import { getOrCreateCloudUser, getUserByStripeCustomerId, updateUser } from "@/models/users"
 import { NextResponse } from "next/server"

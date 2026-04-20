@@ -48,40 +48,18 @@ export const PROVIDERS = [
     logo: "/logo/mistral.svg"
   },
   {
-    key: "local",
-    label: "Local LLM",
-    apiKeyName: "local_llm_api_key",
-    apiKeyLabel: "API Key (optional)",
-    placeholder: "lm-studio",
-    baseUrlName: "local_llm_base_url",
+    key: "ollama",
+    label: "Ollama",
+    baseUrlName: "ollama_base_url",
     baseUrlLabel: "Base URL",
     baseUrlPlaceholder: "http://127.0.0.1:11434",
-    modelName: "local_llm_model_name",
+    modelName: "ollama_model_name",
     defaultModelName: "gemma3:4b",
-    backendName: "local_llm_backend",
-    backendLabel: "Backend",
-    defaultBackend: "ollama",
-    backendOptions: [
-      {
-        value: "ollama",
-        label: "Ollama",
-        baseUrlPlaceholder: "http://127.0.0.1:11434",
-        apiKeyLabel: "API Key (unused)",
-        apiKeyPlaceholder: "Not required for Ollama",
-      },
-      {
-        value: "lmstudio",
-        label: "LM Studio",
-        baseUrlPlaceholder: "http://127.0.0.1:1234/v1",
-        apiKeyLabel: "API Key (optional)",
-        apiKeyPlaceholder: "lm-studio",
-      },
-    ],
-    apiDoc: "https://github.com/vas3k/TaxHacker#readme",
-    apiDocLabel: "TaxHacker setup guide",
+    apiDoc: "https://ollama.com/download",
+    apiDocLabel: "Ollama",
     help: {
-      url: "https://github.com/vas3k/TaxHacker#readme",
-      label: "TaxHacker setup guide"
+      url: "https://ollama.com/download",
+      label: "Install Ollama"
     },
     logo: "/logo/logo.svg"
   },

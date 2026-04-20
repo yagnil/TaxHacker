@@ -3,7 +3,7 @@
 import { useNotification } from "@/app/(app)/context"
 import { uploadFilesAction } from "@/app/(app)/files/actions"
 import { Button } from "@/components/ui/button"
-import config from "@/lib/config"
+import config from "@/lib/public-config"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ComponentProps, startTransition, useRef, useState } from "react"

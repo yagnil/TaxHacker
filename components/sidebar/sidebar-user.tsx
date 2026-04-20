@@ -11,7 +11,7 @@ import {
 import { SidebarMenuButton } from "@/components/ui/sidebar"
 import { UserProfile } from "@/lib/auth"
 import { authClient } from "@/lib/auth-client"
-import { PLANS } from "@/lib/stripe"
+import { PLANS } from "@/lib/stripe-plans"
 import { formatBytes } from "@/lib/utils"
 import { CreditCard, LogOut, MoreVertical, Settings, Sparkles, User } from "lucide-react"
 import Link from "next/link"

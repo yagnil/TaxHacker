@@ -1,6 +1,7 @@
 import { Card, CardDescription, CardTitle } from "@/components/ui/card"
 import { ColoredText } from "@/components/ui/colored-text"
 import config from "@/lib/config"
+import { PROVIDERS } from "@/lib/llm-providers"
 import { getSelfHostedUser } from "@/models/users"
 import { ShieldAlert } from "lucide-react"
 import Image from "next/image"
@@ -31,17 +32,12 @@ export default async function SelfHostedWelcomePage() {
     redirect(config.selfHosted.redirectUrl)
   }
 
-  const defaultProvider = "local"
+  const defaultProvider = PROVIDERS[0].key
   const defaultProviderValues = {
     openai: { apiKey: config.ai.openaiApiKey ?? "", model: config.ai.openaiModelName, baseUrl: "" },
     google: { apiKey: config.ai.googleApiKey ?? "", model: config.ai.googleModelName, baseUrl: "" },
     mistral: { apiKey: config.ai.mistralApiKey ?? "", model: config.ai.mistralModelName, baseUrl: "" },
-    local: {
-      apiKey: config.ai.localLlmApiKey ?? "",
-      model: config.ai.localLlmModelName,
-      baseUrl: config.ai.localLlmBaseUrl,
-      backend: config.ai.localLlmBackend,
-    },
+    ollama: { apiKey: "", model: config.ai.ollamaModelName, baseUrl: config.ai.ollamaBaseUrl },
   }
 
   return (

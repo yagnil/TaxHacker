@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plan } from "@/lib/stripe"
+import { Plan } from "@/lib/stripe-plans"
 import { Check, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { FormError } from "../forms/error"

@@ -10,39 +10,31 @@ import { PROVIDERS } from "@/lib/llm-providers"
 
 type Props = {
   defaultProvider: string
-  defaultProviderValues: Record<string, { apiKey: string; model: string; baseUrl: string; backend?: string }>
+  defaultProviderValues: Record<string, { apiKey: string; model: string; baseUrl: string }>
 }
 
 export default function SelfHostedSetupFormClient({ defaultProvider, defaultProviderValues }: Props) {
   const [provider, setProvider] = useState(defaultProvider)
   const selected = PROVIDERS.find(p => p.key === provider)!
   const getDefaultValues = useCallback(
-    (providerKey: string) => defaultProviderValues[providerKey] ?? { apiKey: "", model: "", baseUrl: "", backend: "" },
+    (providerKey: string) => defaultProviderValues[providerKey] ?? { apiKey: "", model: "", baseUrl: "" },
     [defaultProviderValues]
   )
 
   const [apiKey, setApiKey] = useState(getDefaultValues(provider).apiKey)
   const [model, setModel] = useState(getDefaultValues(provider).model || selected.defaultModelName)
   const [baseUrl, setBaseUrl] = useState(getDefaultValues(provider).baseUrl)
-  const [backend, setBackend] = useState(getDefaultValues(provider).backend || selected.defaultBackend || "")
-  const touched = useRef({ apiKey: false, model: false, baseUrl: false })
+  const userTyped = useRef(false)
 
   useEffect(() => {
-    const defaults = getDefaultValues(provider)
-    if (!touched.current.apiKey) {
+    if (!userTyped.current) {
+      const defaults = getDefaultValues(provider)
       setApiKey(defaults.apiKey)
-    }
-    if (!touched.current.model) {
       setModel(defaults.model || selected.defaultModelName)
-    }
-    if (!touched.current.baseUrl) {
       setBaseUrl(defaults.baseUrl)
     }
-    setBackend(defaults.backend || selected.defaultBackend || "")
-    touched.current = { apiKey: false, model: false, baseUrl: false }
-  }, [provider, getDefaultValues, selected.defaultBackend, selected.defaultModelName])
-
-  const selectedBackend = selected.backendOptions?.find(option => option.value === backend)
+    userTyped.current = false
+  }, [provider, getDefaultValues, selected.defaultModelName])
 
   return (
     <form action={selfHostedGetStartedAction} className="flex flex-col gap-8 pt-8">
@@ -67,26 +59,6 @@ export default function SelfHostedSetupFormClient({ defaultProvider, defaultProv
       </div>
       <div>
         <div className="flex flex-col gap-4">
-          {selected.backendName && selected.backendOptions && (
-            <FormSelect
-              title={`${selected.label} ${selected.backendLabel || "Backend"}`}
-              name={selected.backendName}
-              value={backend}
-              onValueChange={(value) => {
-                setBackend(value)
-                if (selected.key === "local") {
-                  const matchingOption = selected.backendOptions?.find(option => option.value === value)
-                  if (matchingOption?.baseUrlPlaceholder && !touched.current.baseUrl) {
-                    setBaseUrl(matchingOption.baseUrlPlaceholder)
-                  }
-                }
-              }}
-              items={selected.backendOptions.map(option => ({
-                code: option.value,
-                name: option.label,
-              }))}
-            />
-          )}
           {selected.apiKeyName && (
             <>
               <FormInput
@@ -95,20 +67,16 @@ export default function SelfHostedSetupFormClient({ defaultProvider, defaultProv
                 value={apiKey ?? ""}
                 onChange={e => {
                   setApiKey(e.target.value)
-                  touched.current.apiKey = true
+                  userTyped.current = true
                 }}
-                placeholder={selectedBackend?.apiKeyPlaceholder || selected.placeholder}
+                placeholder={selected.placeholder}
               />
               <small className="text-xs text-muted-foreground flex justify-center mt-2">
-                {selected.key === "local" ? "Use a placeholder for LM Studio if your server expects one." : "Get key from "}
-                {selected.key !== "local" && (
-                  <>
-                    {"\u00A0"}
-                    <a href={selected.help.url} target="_blank" className="underline">
-                      {selected.help.label}
-                    </a>
-                  </>
-                )}
+                Get key from
+                {"\u00A0"}
+                <a href={selected.help.url} target="_blank" className="underline">
+                  {selected.help.label}
+                </a>
               </small>
             </>
           )}
@@ -119,9 +87,9 @@ export default function SelfHostedSetupFormClient({ defaultProvider, defaultProv
               value={baseUrl ?? ""}
               onChange={e => {
                 setBaseUrl(e.target.value)
-                touched.current.baseUrl = true
+                userTyped.current = true
               }}
-              placeholder={selectedBackend?.baseUrlPlaceholder || selected.baseUrlPlaceholder}
+              placeholder={selected.baseUrlPlaceholder}
             />
           )}
           <FormInput
@@ -130,7 +98,7 @@ export default function SelfHostedSetupFormClient({ defaultProvider, defaultProv
             value={model}
             onChange={e => {
               setModel(e.target.value)
-              touched.current.model = true
+              userTyped.current = true
             }}
             placeholder={selected.defaultModelName}
           />

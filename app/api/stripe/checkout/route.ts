@@ -1,5 +1,6 @@
 import config from "@/lib/config"
-import { PLANS, stripeClient } from "@/lib/stripe"
+import { stripeClient } from "@/lib/stripe"
+import { PLANS } from "@/lib/stripe-plans"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {

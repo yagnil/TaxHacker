@@ -3,11 +3,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
     ports:
       - "7331:7331"
     environment:
       - NODE_ENV=production
       - SELF_HOSTED_MODE=true
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - UPLOAD_PATH=/app/data/uploads
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/taxhacker
     volumes:

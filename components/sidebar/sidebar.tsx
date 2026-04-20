@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { UserProfile } from "@/lib/auth"
-import config from "@/lib/config"
+import config from "@/lib/public-config"
 import { ClockArrowUp, FileText, Gift, House, Import, LayoutDashboard, Settings, Upload } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
