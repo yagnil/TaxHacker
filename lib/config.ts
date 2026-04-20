@@ -18,7 +18,7 @@ const envSchema = z.object({
   OLLAMA_MODEL_NAME: z.string().default("gemma3:4b"),
   BETTER_AUTH_SECRET: z
     .string()
-    .min(16, "Auth secret must be at least 16 characters")
+    .min(32, "Auth secret must be at least 32 characters")
     .default("please-set-your-key-here"),
   DISABLE_SIGNUP: z.enum(["true", "false"]).default("false"),
   RESEND_API_KEY: z.string().default("please-set-your-resend-api-key-here"),

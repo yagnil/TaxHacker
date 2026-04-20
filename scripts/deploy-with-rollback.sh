@@ -23,6 +23,27 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+current_auth_secret() {
+  sed -n 's/^BETTER_AUTH_SECRET="\{0,1\}\(.*\)"\{0,1\}$/\1/p' "$ENV_FILE" | tail -n 1
+}
+
+validate_auth_secret() {
+  secret=$(current_auth_secret || true)
+
+  if [ -z "$secret" ]; then
+    echo "BETTER_AUTH_SECRET is missing from $ENV_FILE" >&2
+    exit 1
+  fi
+
+  if [ "${#secret}" -lt 32 ]; then
+    echo "BETTER_AUTH_SECRET in $ENV_FILE must be at least 32 characters long." >&2
+    echo "Generate one with: openssl rand -base64 32" >&2
+    exit 1
+  fi
+}
+
+validate_auth_secret
+
 BACKUP_FILE=$(mktemp "${TMPDIR:-/tmp}/taxhacker-env.XXXXXX")
 cp "$ENV_FILE" "$BACKUP_FILE"
 
