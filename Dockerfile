@@ -7,6 +7,9 @@ ENV NODE_ENV=production
 # Build stage
 FROM base AS builder
 
+ARG BETTER_AUTH_SECRET
+ENV BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+
 # Install dependencies required for Prisma
 RUN apt-get update && apt-get install -y openssl
 
