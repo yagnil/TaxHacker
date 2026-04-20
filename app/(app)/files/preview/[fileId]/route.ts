@@ -7,6 +7,9 @@ import { NextResponse } from "next/server"
 import path from "path"
 import { encodeFilename } from "@/lib/utils"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(request: Request, { params }: { params: Promise<{ fileId: string }> }) {
   const { fileId } = await params
   const user = await getCurrentUser()

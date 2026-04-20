@@ -5,6 +5,9 @@ import { getFileById } from "@/models/files"
 import fs from "fs/promises"
 import { NextResponse } from "next/server"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(request: Request, { params }: { params: Promise<{ fileId: string }> }) {
   const { fileId } = await params
   const user = await getCurrentUser()
